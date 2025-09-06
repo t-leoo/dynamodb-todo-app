@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-const TodoModel = require('./models/TodoModel');
+const DatabaseFactory = require('./models/DatabaseFactory');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,8 +13,23 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Initialize Todo model
-const todoModel = new TodoModel();
+// Initialize database model based on environment variable
+const databaseType = process.env.DATABASE_TYPE || 'dynamodb';
+let todoModel;
+
+async function initializeDatabase() {
+  try {
+    todoModel = DatabaseFactory.create(databaseType);
+    await todoModel.initialize();
+    console.log(`Database initialized successfully with ${databaseType}`);
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+  }
+}
+
+// Initialize database on startup
+initializeDatabase();
 
 // Validation middleware
 const validateTodo = (req, res, next) => {
@@ -140,7 +155,31 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Todo App server running on port ${PORT}`);
   console.log(`Visit http://localhost:${PORT} to use the application`);
+  console.log(`Using database: ${databaseType}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  if (todoModel) {
+    await todoModel.close();
+  }
+  server.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully');
+  if (todoModel) {
+    await todoModel.close();
+  }
+  server.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
+  });
 });
