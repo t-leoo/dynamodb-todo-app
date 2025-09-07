@@ -193,4 +193,6 @@ MYSQL_SSL=true  # Set to true for RDS
 ### Application Variables
 - `PORT` - Server port (default: 3000)
 - `NODE_ENV` - Environment mode (development/production)
+
+### Application Sample
 - ![alt text](https://github.com/t-leoo/dynamodb-todo-app/blob/main/sample.png?raw=true)
